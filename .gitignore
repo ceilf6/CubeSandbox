@@ -48,6 +48,10 @@ docs/image.png
 __pycache__
 /design
 /plan
+/review.md
 /tests
+
+# cube-lifecycle-manager local build output (Makefile-produced binary)
+cube-lifecycle-manager/bin/
 
 web/tsconfig.tsbuildinfo

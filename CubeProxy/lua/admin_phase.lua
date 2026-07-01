@@ -166,11 +166,19 @@ local function handle_last_active()
 end
 
 local function handle_healthz()
+    -- heartbeat_last_pushed_ms is written by proxy_registry.lua's timer;
+    -- absent when the registry feature is disabled or has never succeeded.
+    local hb_ms
+    local ldict = ngx.shared.local_cache
+    if ldict then
+        hb_ms = ldict:get("cube_proxy_heartbeat_last_pushed_ms")
+    end
     return reply(ngx.HTTP_OK, {
-        ok    = true,
-        meta  = META and META:free_space() or nil,
-        state = STATE and STATE:free_space() or nil,
-        last  = LAST and LAST:free_space() or nil,
+        ok                          = true,
+        meta                        = META and META:free_space() or nil,
+        state                       = STATE and STATE:free_space() or nil,
+        last                        = LAST and LAST:free_space() or nil,
+        heartbeat_last_pushed_ms    = hb_ms,
     })
 end
 
