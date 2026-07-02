@@ -20,6 +20,12 @@ This directory is used to build and deliver the single-machine one-click release
 - `scripts/one-click/`: Validation and maintenance helpers used by the systemd-managed deployment after installation.
 - `terraform/tencentcloud/`: Terraform deployer for a **clustered** CubeSandbox on Tencent Cloud (TKE control plane + CVM compute nodes). `create.sh` is the entry point; `destroy.sh` tears everything down. These files are shipped both at the release-bundle top level and inside `sandbox-package` (see "Tencent Cloud Cluster Deployment").
 
+## Supported Operating Systems
+
+- Build / deployment host: Linux is recommended. macOS is supported for the Tencent Cloud Terraform deployer (`terraform/tencentcloud/create.sh` and `destroy.sh`), including the default macOS Bash 3.2 environment.
+- Windows: native `cmd.exe` / PowerShell execution is not supported. Use WSL2 (Ubuntu or another Linux distribution) when running the shell scripts from Windows.
+- Target machines: the one-click runtime expects Linux with systemd and Docker/containerd support. The Tencent Cloud Terraform deployer creates Linux CVMs/TKE resources and configures them through SSH.
+
 ## Build Inputs
 
 The required fixed kernel artifact is the ordinary guest kernel `vmlinux`. A PVM guest kernel can also be packaged as `vmlinux-pvm`:
@@ -449,6 +455,12 @@ directory through a CFS (Cloud File Storage, "通用标准型" / General Standar
 share mounted ReadWriteMany — an elastic, pay-as-you-go file system provisioned
 before the addons so all replicas read/write the same template / snapshot /
 runtime state.
+
+`cube-proxy` runs a **single replica** by default
+(`TENCENTCLOUD_CUBE_PROXY_REPLICAS=1`). Auto-pause/auto-resume only works
+correctly with one replica, because each sidecar sweeper only sees traffic
+hitting its own pod. To scale beyond 1 replica the front-end LB must hash on
+SandboxID (session affinity); otherwise auto-pause/auto-resume will misfire.
 
 The deployer is surfaced at the **top level** of the extracted bundle, so right
 after extracting the package you can run it directly:

@@ -20,6 +20,12 @@
 - `scripts/one-click/`：systemd 托管部署安装后使用的校验与维护辅助脚本。
 - `terraform/tencentcloud/`：在腾讯云上部署**集群版** CubeSandbox 的 Terraform 部署器（TKE 控制面 + CVM 计算节点）。`create.sh` 为入口，`destroy.sh` 负责整体销毁。这些文件同时位于发布包顶层和 `sandbox-package` 内（见“腾讯云集群部署”）。
 
+## 支持的操作系统
+
+- 构建 / 部署执行机：推荐使用 Linux。腾讯云 Terraform 部署脚本（`terraform/tencentcloud/create.sh` 和 `destroy.sh`）也支持 macOS，包括 macOS 默认的 Bash 3.2 环境。
+- Windows：不支持原生 `cmd.exe` / PowerShell 直接执行。Windows 用户请通过 WSL2（Ubuntu 或其他 Linux 发行版）运行这些 shell 脚本。
+- 目标机：one-click 运行时要求 Linux，并依赖 systemd 与 Docker/containerd 能力。腾讯云 Terraform 部署器会创建 Linux CVM/TKE 资源，并通过 SSH 完成配置。
+
 ## 构建输入
 
 必须准备的固定 kernel 制品是普通 guest kernel `vmlinux`，也可以额外打包 PVM guest kernel `vmlinux-pvm`：
@@ -424,6 +430,8 @@ sudo yum install -y e2fsprogs util-linux
 除了单机的 `install.sh` 之外，发布包还附带一个基于 Terraform 的部署器，可在腾讯云上拉起**集群版** CubeSandbox：由托管的 TKE 控制面运行 `cubemaster` / `cube-api` / `cube-proxy` / `cube-webui`，后端使用云上 MySQL + Redis，并带一个或多个 CVM PVM 计算节点。跳板机（SSH 端口 `443`）既是构建主机，也是这个原本私有 VPC 的堡垒机。
 
 `cubemaster` 运行多个副本，通过一块以 ReadWriteMany 方式挂载的 CFS（文件存储，通用标准型）NFS 共享盘共用 `/data/CubeMaster/storage` 目录——该文件系统弹性按量计费，会在部署 addons 之前先行创建，使各副本读写同一份模板 / 存档 / 运行时状态。
+
+`cube-proxy` 默认运行**单副本**（`TENCENTCLOUD_CUBE_PROXY_REPLICAS=1`）。自动暂停 / 自动恢复只有在单副本下才正确，因为每个 sidecar sweeper 只能看到打到自身 Pod 的流量。若要扩展到多副本，前端 LB 必须按 SandboxID 做 hash（会话保持），否则自动暂停 / 自动恢复会误判。
 
 该部署器被放在解压后发布包的**顶层**，因此解压后即可直接运行：
 
